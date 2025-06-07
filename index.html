@@ -1,34 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="permissions-policy" content="camera=*">
-    <title>Simple AR</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-    <!-- WebXR Polyfill -->
-    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.min.js"></script>
-    <!-- AR Button -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/webxr/ARButton.js"></script>
+  <meta charset="UTF-8" />
+  <title>WebAR Markerless Image Placement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body, html { margin: 0; padding: 0; overflow: hidden; }
+    #tapText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -100px);
+      font-size: 22px;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 15px;
+      border-radius: 10px;
+      z-index: 10;
+      font-family: sans-serif;
+    }
+  </style>
 </head>
 <body>
-    <div id="info">
-        <h1>Simple AR</h1>
-        <p>Point at a flat surface to place content</p>
-        <div id="status-message"></div>
-    </div>
+  <div id="tapText">Tap to place</div>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.152.0';
+    import { ARButton } from 'https://cdn.skypack.dev/three@0.152.0/examples/jsm/webxr/ARButton.js';
 
-    <div id="ar-container"></div>
+    let camera, scene, renderer;
+    let controller;
+    let reticle;
+    let hitTestSource = null;
+    let hitTestSourceRequested = false;
+    let placed = false;
 
-    <div id="placement-ui">
-        <div id="reticle"></div>
-        <div id="tap-text">Tap to place</div>
-    </div>
+    init();
+    animate();
 
-    <script src="app.js"></script>
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera();
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      document.body.appendChild(renderer.domElement);
+
+      // AR button
+      document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+
+      // Light
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      scene.add(light);
+
+      // Reticle
+      const geometry = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
+      const material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+      reticle = new THREE.Mesh(geometry, material);
+      reticle.matrixAutoUpdate = false;
+      reticle.visible = false;
+      scene.add(reticle);
+
+      // Tap controller
+      controller = renderer.xr.getController(0);
+      controller.addEventListener('select', onSelect);
+      scene.add(controller);
+    }
+
+    function onSelect() {
+      if (reticle.visible && !placed) {
+        const imgTexture = new THREE.TextureLoader().load('your-image.jpg');
+        const imgGeometry = new THREE.PlaneGeometry(0.3, 0.3);
+        const imgMaterial = new THREE.MeshBasicMaterial({ map: imgTexture, transparent: true });
+
+        const imgMesh = new THREE.Mesh(imgGeometry, imgMaterial);
+        imgMesh.position.setFromMatrixPosition(reticle.matrix);
+        imgMesh.quaternion.setFromRotationMatrix(reticle.matrix);
+        scene.add(imgMesh);
+
+        placed = true;
+        reticle.visible = false;
+        document.getElementById('tapText').style.display = 'none';
+      }
+    }
+
+    function animate() {
+      renderer.setAnimationLoop(render);
+    }
+
+    function render(timestamp, frame) {
+      if (frame) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const session = renderer.xr.getSession();
+
+        if (!hitTestSourceRequested) {
+          session.requestReferenceSpace('viewer').then(viewerRefSpace => {
+            session.requestHitTestSource({ space: viewerRefSpace }).then(source => {
+              hitTestSource = source;
+            });
+          });
+
+          session.addEventListener('end', () => {
+            hitTestSourceRequested = false;
+            hitTestSource = null;
+          });
+
+          hitTestSourceRequested = true;
+        }
+
+        if (hitTestSource && !placed) {
+          const hitTestResults = frame.getHitTestResults(hitTestSource);
+          if (hitTestResults.length) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(referenceSpace);
+            reticle.visible = true;
+            reticle.matrix.fromArray(pose.transform.matrix);
+          } else {
+            reticle.visible = false;
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+  </script>
 </body>
-</html> 
+</html>
