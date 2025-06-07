@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AR Image Placement</title>
+    <title>Simple AR Ground Detection</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
@@ -35,90 +34,44 @@
             border-radius: 50%;
             pointer-events: none;
             z-index: 100;
-            animation: pulse 1.5s infinite;
-        }
-        #tap-text {
-            position: fixed;
-            top: calc(50% - 80px);
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 18px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-family: sans-serif;
-            z-index: 100;
-        }
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div id="info">Point at a flat surface to place content</div>
+    <div id="info">Point at a flat surface</div>
     <div id="reticle"></div>
-    <div id="tap-text">Tap to place</div>
 
     <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960;"
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
         renderer="logarithmicDepthBuffer: true;"
         vr-mode-ui="enabled: false">
-
-        <!-- Define the image to be placed -->
-        <a-assets>
-            <img id="myImage" src="https://picsum.photos/200/200">
-        </a-assets>
 
         <!-- Camera -->
         <a-entity camera></a-entity>
 
-        <!-- AR.js will automatically add the camera feed here -->
+        <!-- Ground plane for detection -->
+        <a-entity
+            id="ground"
+            material="color: #7BC8A4; opacity: 0.5; side: double"
+            geometry="primitive: plane; width: 100; height: 100"
+            rotation="-90 0 0"
+            position="0 0 0">
+        </a-entity>
+
     </a-scene>
 
     <script>
-        // Get DOM elements
         const reticle = document.getElementById('reticle');
-        const tapText = document.getElementById('tap-text');
         const info = document.getElementById('info');
-        const scene = document.querySelector('a-scene');
+        const ground = document.getElementById('ground');
 
-        // Track if image is placed
-        let isPlaced = false;
-        let lastIntersection = null;
-
-        // Create a raycaster for hit testing
+        // Create raycaster for hit testing
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Handle tap/click
-        document.addEventListener('click', function(event) {
-            if (!isPlaced && lastIntersection) {
-                // Create image entity
-                const image = document.createElement('a-image');
-                image.setAttribute('src', '#myImage');
-                image.setAttribute('position', lastIntersection.point);
-                image.setAttribute('rotation', '0 0 0');
-                image.setAttribute('scale', '0.3 0.3 0.3');
-                image.setAttribute('animation', 'property: scale; from: 0 0 0; to: 0.3 0.3 0.3; dur: 500; easing: easeOutElastic');
-                scene.appendChild(image);
-
-                // Hide UI elements
-                reticle.style.display = 'none';
-                tapText.style.display = 'none';
-                info.textContent = 'Image placed successfully!';
-
-                isPlaced = true;
-            }
-        });
-
         // Update reticle position based on hit testing
         function updateReticle(event) {
-            if (isPlaced) return;
-
             // Update mouse position
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -127,27 +80,15 @@
             const camera = document.querySelector('[camera]').components.camera.camera;
             raycaster.setFromCamera(mouse, camera);
 
-            // Get all planes in the scene
-            const planes = document.querySelectorAll('.arjs-plane');
-            
-            // Check for intersections
-            let foundIntersection = false;
-            for (let plane of planes) {
-                const intersects = raycaster.intersectObject(plane.object3D, true);
-                if (intersects.length > 0) {
-                    lastIntersection = intersects[0];
-                    foundIntersection = true;
-                    break;
-                }
-            }
+            // Check for intersections with ground plane
+            const intersects = raycaster.intersectObject(ground.object3D, true);
 
-            if (foundIntersection) {
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
                 reticle.style.display = 'block';
-                tapText.style.display = 'block';
-                info.textContent = 'Surface detected - Tap to place';
+                info.textContent = 'Surface detected';
             } else {
                 reticle.style.display = 'none';
-                tapText.style.display = 'none';
                 info.textContent = 'Point at a flat surface';
             }
         }
@@ -163,53 +104,6 @@
         window.addEventListener('error', function(e) {
             console.error('AR Error:', e);
             info.textContent = 'Error: ' + e.message;
-        });
-
-        // Handle AR.js events
-        scene.addEventListener('arjs-nft-loaded', function() {
-            info.textContent = 'AR initialized successfully';
-        });
-
-        scene.addEventListener('camera-init', function() {
-            info.textContent = 'Camera initialized';
-        });
-
-        scene.addEventListener('camera-error', function(error) {
-            info.textContent = 'Camera error: ' + error.detail.message;
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            if (scene) {
-                scene.setAttribute('arjs', {
-                    sourceWidth: window.innerWidth,
-                    sourceHeight: window.innerHeight,
-                    displayWidth: window.innerWidth,
-                    displayHeight: window.innerHeight
-                });
-            }
-        });
-
-        // Add plane detection
-        scene.addEventListener('markerFound', function(event) {
-            const marker = event.detail.target;
-            const markerRoot = marker.object3D;
-            
-            // Create a plane at the marker position
-            const plane = document.createElement('a-entity');
-            plane.setAttribute('class', 'arjs-plane');
-            plane.setAttribute('geometry', {
-                primitive: 'plane',
-                width: 1,
-                height: 1
-            });
-            plane.setAttribute('material', {
-                color: '#7BC8A4',
-                opacity: 0.5,
-                side: 'double'
-            });
-            plane.setAttribute('rotation', '-90 0 0');
-            markerRoot.add(plane.object3D);
         });
     </script>
 </body>
