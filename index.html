@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web AR Image Placement</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Add iOS WebXR support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div id="info">
         <h1>Web AR Image Placement</h1>
         <p>Tap on the detected ground plane to place an image</p>
+        <div id="device-info"></div>
     </div>
     <div id="ar-button">
         <button id="start-ar">Start AR</button>

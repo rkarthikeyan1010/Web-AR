@@ -2,6 +2,7 @@ let scene, camera, renderer;
 let reticle;
 let hitTestSource = null;
 let hitTestSourceRequested = false;
+let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
 init();
 animate();
@@ -30,24 +31,55 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
+    // Check device compatibility
+    checkDeviceCompatibility();
+
     // Add AR button
     document.getElementById('start-ar').addEventListener('click', () => {
         if (navigator.xr) {
             navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
                 if (supported) {
-                    const button = ARButton.createButton(renderer);
+                    const button = ARButton.createButton(renderer, {
+                        onUnsupported: () => {
+                            showMessage('WebXR not supported on this device. Please use a compatible browser.');
+                        }
+                    });
                     document.getElementById('ar-button').appendChild(button);
                 } else {
-                    alert('AR is not supported on your device');
+                    if (isIOS) {
+                        showMessage('Please use WebXR Viewer app on iOS devices. Download from the App Store.');
+                    } else {
+                        showMessage('AR is not supported on your device');
+                    }
                 }
             });
         } else {
-            alert('WebXR is not supported on your device');
+            if (isIOS) {
+                showMessage('Please use WebXR Viewer app on iOS devices. Download from the App Store.');
+            } else {
+                showMessage('WebXR is not supported on your device');
+            }
         }
     });
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
+}
+
+function checkDeviceCompatibility() {
+    const deviceInfo = document.getElementById('device-info');
+    if (isIOS) {
+        deviceInfo.innerHTML = '<p style="color: #ff6b6b;">iOS detected: Please use WebXR Viewer app from the App Store</p>';
+    } else if (/Android/.test(navigator.userAgent)) {
+        deviceInfo.innerHTML = '<p style="color: #4CAF50;">Android detected: Chrome browser recommended</p>';
+    } else {
+        deviceInfo.innerHTML = '<p style="color: #ff6b6b;">Desktop detected: Please use a mobile device</p>';
+    }
+}
+
+function showMessage(message) {
+    const deviceInfo = document.getElementById('device-info');
+    deviceInfo.innerHTML = `<p style="color: #ff6b6b;">${message}</p>`;
 }
 
 function onWindowResize() {
