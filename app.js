@@ -1,23 +1,29 @@
-let scene, camera, renderer;
+let camera, scene, renderer;
+let reticle;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
 let placementUI;
 let isPlaced = false;
 
-// Initialize the AR experience
-window.XR8 ? init() : window.addEventListener('xrloaded', init);
+// Initialize WebXR Polyfill
+const polyfill = new WebXRPolyfill();
 
 function init() {
-    // Create scene
+    const container = document.getElementById('ar-container');
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-    
-    // Create renderer
-    renderer = new THREE.WebGLRenderer({ 
-        canvas: document.getElementById('camerafeed'),
-        antialias: true, 
-        alpha: true
-    });
+
+    camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.01,
+        20
+    );
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
 
     // Add light
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
@@ -27,49 +33,77 @@ function init() {
     // Get UI elements
     placementUI = document.getElementById('placement-ui');
 
-    // Set up 8th Wall
-    XR8.addCameraPipelineModules([
-        // Add camera pipeline modules
-        XR8.GlTextureRenderer.pipelineModule(),
-        XR8.Threejs.pipelineModule(),
-        XR8.XrController.pipelineModule(),
-        XR8.PipelineModule({
-            name: 'surface-detection',
-            onUpdate: () => {
-                if (!isPlaced) {
-                    const {camera} = XR8.Threejs.xrScene();
-                    if (camera) {
-                        const hitTestResults = XR8.XrController.hitTest(0, 0);
-                        if (hitTestResults.length > 0) {
-                            placementUI.classList.remove('hidden');
-                            updateStatus('Surface detected! Tap to place content.');
-                        } else {
-                            placementUI.classList.add('hidden');
-                            updateStatus('Move device to find a surface...');
-                        }
-                    }
-                }
-            }
-        })
-    ]);
+    // Create reticle
+    reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x4CC3D9 })
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
 
-    // Handle tap to place
-    XR8.addCameraPipelineModules([
-        XR8.PipelineModule({
-            name: 'tap-to-place',
-            onUpdate: () => {
-                if (!isPlaced && XR8.XrController.isTapped()) {
-                    const hitTestResults = XR8.XrController.hitTest(0, 0);
-                    if (hitTestResults.length > 0) {
-                        placeImage(hitTestResults[0].transform);
-                    }
-                }
-            }
-        })
-    ]);
+    // Add AR Button
+    document.body.appendChild(ARButton.createButton(renderer, { 
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: document.getElementById('placement-ui') }
+    }));
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
+
+    // Start the AR session
+    renderer.setAnimationLoop(render);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function render(timestamp, frame) {
+    if (frame) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const session = renderer.xr.getSession();
+
+        if (!hitTestSourceRequested) {
+            session.requestReferenceSpace('viewer').then((referenceSpace) => {
+                session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                    hitTestSource = source;
+                });
+            });
+
+            session.addEventListener('end', () => {
+                hitTestSourceRequested = false;
+                hitTestSource = null;
+                placementUI.classList.add('hidden');
+            });
+
+            hitTestSourceRequested = true;
+        }
+
+        if (hitTestSource) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+            if (hitTestResults.length > 0) {
+                const hit = hitTestResults[0];
+                const pose = hit.getPose(referenceSpace);
+
+                reticle.visible = true;
+                reticle.matrix.fromArray(pose.transform.matrix);
+                placementUI.classList.remove('hidden');
+                updateStatus('Surface detected! Tap to place content.');
+            } else {
+                reticle.visible = false;
+                placementUI.classList.add('hidden');
+                if (!isPlaced) {
+                    updateStatus('Move device to find a surface...');
+                }
+            }
+        }
+    }
+    renderer.render(scene, camera);
 }
 
 function placeImage(matrix) {
@@ -115,15 +149,12 @@ function placeImage(matrix) {
     updateStatus('Content placed successfully!');
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
 function updateStatus(message) {
     const statusElement = document.getElementById('status-message');
     if (statusElement) {
         statusElement.innerHTML = `<p>${message}</p>`;
     }
-} 
+}
+
+// Initialize when the page loads
+window.addEventListener('load', init); 

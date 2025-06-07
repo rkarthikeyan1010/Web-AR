@@ -1,9 +1,115 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
-    background-color: #000;
+    font-family: Arial, sans-serif;
+}
+
+#ar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+#info-box {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 2;
+    max-width: 80%;
+}
+
+#status-message {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #4CC3D9;
+}
+
+#placement-ui {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px 25px;
+    border-radius: 10px;
+    color: white;
+    transition: opacity 0.3s ease;
+}
+
+#placement-ui.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#tap-text {
+    font-size: 16px;
+    margin-top: 10px;
+    color: #4CC3D9;
+}
+
+/* AR Button styles */
+.a-enter-ar-button {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4CC3D9;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 2;
+    transition: background-color 0.3s ease;
+}
+
+.a-enter-ar-button:hover {
+    background: #3DA8C0;
+}
+
+/* Loading indicator */
+.loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 18px;
+    text-align: center;
+    z-index: 3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #info-box {
+        top: 10px;
+        padding: 10px 15px;
+    }
+
+    #placement-ui {
+        bottom: 30px;
+        padding: 10px 15px;
+    }
+
+    .a-enter-ar-button {
+        bottom: 10px;
+        padding: 10px 20px;
+    }
 }
 
 #camerafeed {
@@ -13,15 +119,6 @@ body {
     width: 100%;
     height: 100%;
     z-index: 1;
-}
-
-#ar-button {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
-    text-align: center;
 }
 
 #start-ar {
@@ -45,11 +142,6 @@ body {
 #start-ar:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-#status-message {
-    margin-top: 10px;
-    font-size: 14px;
 }
 
 #status-message p {
@@ -97,20 +189,6 @@ body {
     border-radius: 50%;
 }
 
-#tap-text {
-    position: absolute;
-    top: calc(50% - 50px);
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 18px;
-    text-align: center;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 8px 16px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-
 @keyframes pulse {
     0% {
         transform: translate(-50%, -50%) scale(1);
@@ -124,18 +202,6 @@ body {
         transform: translate(-50%, -50%) scale(1);
         opacity: 1;
     }
-}
-
-/* Loading indicator */
-.loading {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 3;
-    color: white;
-    font-size: 18px;
-    text-align: center;
 }
 
 /* Error message styling */
