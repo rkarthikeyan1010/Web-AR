@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebXR Ground Detection</title>
+    <title>WebXR Markerless AR</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
@@ -34,6 +34,12 @@
             border-radius: 50%;
             pointer-events: none;
             z-index: 100;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
     </style>
 </head>
@@ -56,7 +62,11 @@
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
             // Create renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                powerPreference: 'high-performance'
+            });
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.xr.enabled = true;
@@ -138,4 +148,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
