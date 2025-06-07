@@ -2,7 +2,8 @@ let camera, scene, renderer;
 let reticle;
 let placementUI;
 let isPlaced = false;
-let arCode;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
 
 // Debug function
 function debug(message) {
@@ -19,6 +20,7 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
     document.getElementById('ar-container').appendChild(renderer.domElement);
 
     // Add light
@@ -38,71 +40,35 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
-    // Initialize AR
-    initializeAR();
+    // Add AR button
+    document.body.appendChild(THREE.ARButton.createButton(renderer, {
+        onUnsupported: () => {
+            updateStatus('AR is not supported on your device');
+        }
+    }));
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
 
+    // Set up AR session
+    renderer.xr.addEventListener('sessionstart', onSessionStart);
+    renderer.xr.addEventListener('sessionend', onSessionEnd);
+
+    // Start animation loop
+    renderer.setAnimationLoop(render);
+
     debug('Three.js scene initialized');
 }
 
-function initializeAR() {
-    try {
-        arCode = new ARCode({
-            apiKey: '1r3L0EBt8ZQp',
-            container: 'ar-container',
-            onInit: () => {
-                console.log('AR initialized');
-                // Start surface detection
-                arCode.startSurfaceDetection();
-            },
-            onError: (error) => {
-                console.error('AR initialization error:', error);
-            }
-        });
+function onSessionStart() {
+    updateStatus('AR session started');
+    placementUI.style.display = 'block';
+}
 
-        // Set up AR event listeners
-        arCode.on('surfaceFound', (surface) => {
-            console.log('Surface found:', surface);
-            if (!isPlaced) {
-                reticle.visible = true;
-                reticle.position.copy(surface.position);
-                reticle.quaternion.copy(surface.quaternion);
-                placementUI.style.display = 'block';
-            }
-        });
-
-        arCode.on('surfaceLost', () => {
-            console.log('Surface lost');
-            reticle.visible = false;
-            placementUI.style.display = 'none';
-        });
-
-        arCode.on('surfaceUpdated', (surface) => {
-            if (!isPlaced && reticle.visible) {
-                reticle.position.copy(surface.position);
-                reticle.quaternion.copy(surface.quaternion);
-            }
-        });
-
-        arCode.on('tap', (position) => {
-            console.log('Tap detected at:', position);
-            if (!isPlaced && reticle.visible) {
-                placeImage(position);
-            }
-        });
-
-        // Start AR session
-        arCode.start().then(() => {
-            console.log('AR session started');
-        }).catch(error => {
-            console.error('Failed to start AR session:', error);
-        });
-
-    } catch (error) {
-        console.error('Failed to initialize AR:', error);
-    }
+function onSessionEnd() {
+    updateStatus('AR session ended');
+    placementUI.style.display = 'none';
+    reticle.visible = false;
 }
 
 function onWindowResize() {
@@ -111,7 +77,46 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function render() {
+    if (renderer.xr.isPresenting) {
+        updateHitTest();
+    }
+}
+
+function updateHitTest() {
+    if (!hitTestSourceRequested) {
+        const session = renderer.xr.getSession();
+        if (session) {
+            session.requestReferenceSpace('viewer').then((referenceSpace) => {
+                session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                    hitTestSource = source;
+                });
+            });
+            hitTestSourceRequested = true;
+        }
+    }
+
+    if (hitTestSource) {
+        const frame = renderer.xr.getFrame();
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+        if (hitTestResults.length > 0) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(renderer.xr.getReferenceSpace());
+
+            if (pose) {
+                reticle.visible = true;
+                reticle.matrix.fromArray(pose.transform.matrix);
+            }
+        } else {
+            reticle.visible = false;
+        }
+    }
+}
+
 function placeImage(position) {
+    if (isPlaced) return;
+
     // Hide placement UI
     placementUI.style.display = 'none';
     isPlaced = true;
@@ -126,7 +131,7 @@ function placeImage(position) {
     });
     
     const plane = new THREE.Mesh(geometry, material);
-    plane.position.copy(position);
+    plane.position.copy(reticle.position);
     plane.quaternion.copy(reticle.quaternion);
 
     // Add animation
@@ -166,6 +171,13 @@ function updateStatus(message) {
         }
     }
 }
+
+// Add tap handler
+renderer.domElement.addEventListener('click', () => {
+    if (reticle.visible && !isPlaced) {
+        placeImage(reticle.position);
+    }
+});
 
 // Initialize when the page loads
 window.addEventListener('load', init); 

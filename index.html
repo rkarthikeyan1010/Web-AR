@@ -5,25 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Markerless AR</title>
+    <title>Web AR Experience</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <!-- AR Code SDK -->
-    <script src="https://ar-code.com/sdk/ar-code.min.js"></script>
-    <script>
-        window.addEventListener('load', function() {
-            if (typeof ARCode === 'undefined') {
-                console.error('AR Code SDK failed to load');
-                document.getElementById('status-message').innerHTML = 
-                    '<p class="error">Failed to load AR SDK. Please check your internet connection and try again.</p>';
-            }
-        });
-    </script>
+    <!-- WebXR Polyfill -->
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.min.js"></script>
+    <!-- AR Button -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/ARButton.js"></script>
 </head>
 <body>
     <div id="info">
-        <h1>AR Experience</h1>
+        <h1>Web AR Experience</h1>
         <p>Point at a flat surface to place content</p>
         <div id="status-message"></div>
     </div>
