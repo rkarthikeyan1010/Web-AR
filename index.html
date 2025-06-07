@@ -3,20 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WebXR Ground Plane AR</title>
+    <title>Markerless AR Experience</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- 8th Wall Web -->
+    <script async src="https://apps.8thwall.com/xrweb?appKey=YOUR_APP_KEY"></script>
     <!-- Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <!-- ARButton.js for WebXR -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/ARButton.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="info">
-        <h1>WebXR Ground Plane AR</h1>
-        <p>Move your device to detect a surface. Tap to place an image.</p>
+        <h1>Markerless AR</h1>
+        <p>Point at a surface to place content</p>
         <div id="status-message"></div>
     </div>
-    <div id="ar-container"></div>
+
+    <canvas id="camerafeed"></canvas>
+
+    <!-- Placement UI -->
+    <div id="placement-ui" class="hidden">
+        <div id="reticle"></div>
+        <div id="tap-text">Tap to place</div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html> 
