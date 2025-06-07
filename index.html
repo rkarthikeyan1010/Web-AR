@@ -1,207 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>WebAR Markerless Image Placement</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <style>
-    body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; }
-    #tapText {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -100px);
-      font-size: 22px;
-      color: white;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px 15px;
-      border-radius: 10px;
-      z-index: 10;
-      font-family: sans-serif;
-    }
-    #status {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: sans-serif;
-      z-index: 100;
-    }
-  </style>
+    <title>AR Image Placement</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: sans-serif;
+            z-index: 100;
+        }
+        #reticle {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 2px solid #00ffff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #tap-text {
+            position: fixed;
+            top: calc(50% - 80px);
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: sans-serif;
+            z-index: 100;
+        }
+    </style>
 </head>
 <body>
-  <div id="status">Initializing...</div>
-  <div id="tapText">Tap to place</div>
-  <script type="module">
-    import * as THREE from 'https://cdn.skypack.dev/three@0.152.0';
-    import { ARButton } from 'https://cdn.skypack.dev/three@0.152.0/examples/jsm/webxr/ARButton.js';
+    <div id="info">Point at a flat surface to place content</div>
+    <div id="reticle"></div>
+    <div id="tap-text">Tap to place</div>
 
-    let camera, scene, renderer;
-    let controller;
-    let reticle;
-    let hitTestSource = null;
-    let hitTestSourceRequested = false;
-    let placed = false;
+    <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        renderer="logarithmicDepthBuffer: true;"
+        vr-mode-ui="enabled: false">
 
-    async function init() {
-      try {
-        // Check if WebXR is supported
-        if (!navigator.xr) {
-          throw new Error('WebXR not supported');
-        }
+        <!-- Define the image to be placed -->
+        <a-assets>
+            <img id="myImage" src="https://picsum.photos/200/200">
+        </a-assets>
 
-        // Request camera permission explicitly
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          } 
-        });
-        
-        // Stop the stream after getting permission
-        stream.getTracks().forEach(track => track.stop());
+        <!-- Camera -->
+        <a-entity camera></a-entity>
 
-        // Create scene
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+        <!-- Image to be placed -->
+        <a-image
+            id="placedImage"
+            src="#myImage"
+            position="0 0 -1"
+            scale="0.3 0.3 0.3"
+            visible="false"
+            animation="property: scale; from: 0 0 0; to: 0.3 0.3 0.3; dur: 500; easing: easeOutElastic; startEvents: click">
+        </a-image>
 
-        // Create renderer
-        renderer = new THREE.WebGLRenderer({ 
-          antialias: true, 
-          alpha: true,
-          powerPreference: 'high-performance'
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.xr.enabled = true;
-        document.body.appendChild(renderer.domElement);
+        <!-- AR.js will automatically add the camera feed here -->
+    </a-scene>
 
-        // AR button
-        const arButton = ARButton.createButton(renderer, { 
-          requiredFeatures: ['hit-test'],
-          onUnsupported: () => {
-            updateStatus('AR is not supported on your device');
-          }
-        });
-        document.body.appendChild(arButton);
+    <script>
+        // Get DOM elements
+        const reticle = document.getElementById('reticle');
+        const tapText = document.getElementById('tap-text');
+        const placedImage = document.getElementById('placedImage');
+        const info = document.getElementById('info');
 
-        // Light
-        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-        scene.add(light);
+        // Track if image is placed
+        let isPlaced = false;
 
-        // Reticle
-        const geometry = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        reticle = new THREE.Mesh(geometry, material);
-        reticle.matrixAutoUpdate = false;
-        reticle.visible = false;
-        scene.add(reticle);
+        // Handle tap/click
+        document.addEventListener('click', function() {
+            if (!isPlaced) {
+                // Get camera position
+                const camera = document.querySelector('[camera]');
+                const cameraPosition = camera.getAttribute('position');
+                const cameraRotation = camera.getAttribute('rotation');
 
-        // Tap controller
-        controller = renderer.xr.getController(0);
-        controller.addEventListener('select', onSelect);
-        scene.add(controller);
+                // Place image at camera position
+                placedImage.setAttribute('position', cameraPosition);
+                placedImage.setAttribute('rotation', cameraRotation);
+                placedImage.setAttribute('visible', true);
 
-        // Handle window resize
-        window.addEventListener('resize', onWindowResize, false);
+                // Hide UI elements
+                reticle.style.display = 'none';
+                tapText.style.display = 'none';
+                info.textContent = 'Image placed successfully!';
 
-        updateStatus('AR initialized successfully');
-      } catch (error) {
-        console.error('Error initializing AR:', error);
-        updateStatus('Error: ' + error.message);
-      }
-    }
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    function onSelect() {
-      if (reticle.visible && !placed) {
-        const imgTexture = new THREE.TextureLoader().load('https://picsum.photos/200/200');
-        const imgGeometry = new THREE.PlaneGeometry(0.3, 0.3);
-        const imgMaterial = new THREE.MeshBasicMaterial({ 
-          map: imgTexture, 
-          transparent: true,
-          side: THREE.DoubleSide
+                isPlaced = true;
+            }
         });
 
-        const imgMesh = new THREE.Mesh(imgGeometry, imgMaterial);
-        imgMesh.position.setFromMatrixPosition(reticle.matrix);
-        imgMesh.quaternion.setFromRotationMatrix(reticle.matrix);
-        scene.add(imgMesh);
+        // Handle errors
+        window.addEventListener('error', function(e) {
+            console.error('AR Error:', e);
+            info.textContent = 'Error: ' + e.message;
+        });
 
-        placed = true;
-        reticle.visible = false;
-        document.getElementById('tapText').style.display = 'none';
-        updateStatus('Image placed successfully!');
-      }
-    }
+        // Handle AR.js events
+        document.querySelector('a-scene').addEventListener('arjs-nft-loaded', function() {
+            info.textContent = 'AR initialized successfully';
+        });
 
-    function animate() {
-      renderer.setAnimationLoop(render);
-    }
+        document.querySelector('a-scene').addEventListener('camera-init', function() {
+            info.textContent = 'Camera initialized';
+        });
 
-    function render(timestamp, frame) {
-      if (frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const session = renderer.xr.getSession();
-
-        if (!hitTestSourceRequested) {
-          session.requestReferenceSpace('viewer').then(viewerRefSpace => {
-            session.requestHitTestSource({ space: viewerRefSpace }).then(source => {
-              hitTestSource = source;
-            });
-          });
-
-          session.addEventListener('end', () => {
-            hitTestSourceRequested = false;
-            hitTestSource = null;
-          });
-
-          hitTestSourceRequested = true;
-        }
-
-        if (hitTestSource && !placed) {
-          const hitTestResults = frame.getHitTestResults(hitTestSource);
-          if (hitTestResults.length) {
-            const hit = hitTestResults[0];
-            const pose = hit.getPose(referenceSpace);
-            reticle.visible = true;
-            reticle.matrix.fromArray(pose.transform.matrix);
-          } else {
-            reticle.visible = false;
-          }
-        }
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    function updateStatus(message) {
-      const statusElement = document.getElementById('status');
-      if (statusElement) {
-        statusElement.textContent = message;
-      }
-      console.log('Status:', message);
-    }
-
-    // Initialize when the page loads
-    window.addEventListener('load', () => {
-      init().then(() => {
-        animate();
-      }).catch(error => {
-        console.error('Failed to initialize:', error);
-        updateStatus('Failed to initialize: ' + error.message);
-      });
-    });
-  </script>
+        document.querySelector('a-scene').addEventListener('camera-error', function(error) {
+            info.textContent = 'Camera error: ' + error.detail.message;
+        });
+    </script>
 </body>
 </html>
