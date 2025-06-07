@@ -76,26 +76,6 @@
         <!-- Camera -->
         <a-entity camera></a-entity>
 
-        <!-- Ground plane detection -->
-        <a-entity
-            id="ground"
-            material="color: #7BC8A4; opacity: 0.5; side: double"
-            geometry="primitive: plane; width: 100; height: 100"
-            rotation="-90 0 0"
-            position="0 0 0"
-            visible="false">
-        </a-entity>
-
-        <!-- Image to be placed -->
-        <a-image
-            id="placedImage"
-            src="#myImage"
-            position="0 0 -1"
-            scale="0.3 0.3 0.3"
-            visible="false"
-            animation="property: scale; from: 0 0 0; to: 0.3 0.3 0.3; dur: 500; easing: easeOutElastic; startEvents: click">
-        </a-image>
-
         <!-- AR.js will automatically add the camera feed here -->
     </a-scene>
 
@@ -103,21 +83,28 @@
         // Get DOM elements
         const reticle = document.getElementById('reticle');
         const tapText = document.getElementById('tap-text');
-        const placedImage = document.getElementById('placedImage');
         const info = document.getElementById('info');
-        const ground = document.getElementById('ground');
+        const scene = document.querySelector('a-scene');
 
         // Track if image is placed
         let isPlaced = false;
         let lastIntersection = null;
 
+        // Create a raycaster for hit testing
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
         // Handle tap/click
         document.addEventListener('click', function(event) {
             if (!isPlaced && lastIntersection) {
-                // Place image at intersection point
-                placedImage.setAttribute('position', lastIntersection.point);
-                placedImage.setAttribute('rotation', '0 0 0');
-                placedImage.setAttribute('visible', true);
+                // Create image entity
+                const image = document.createElement('a-image');
+                image.setAttribute('src', '#myImage');
+                image.setAttribute('position', lastIntersection.point);
+                image.setAttribute('rotation', '0 0 0');
+                image.setAttribute('scale', '0.3 0.3 0.3');
+                image.setAttribute('animation', 'property: scale; from: 0 0 0; to: 0.3 0.3 0.3; dur: 500; easing: easeOutElastic');
+                scene.appendChild(image);
 
                 // Hide UI elements
                 reticle.style.display = 'none';
@@ -128,10 +115,7 @@
             }
         });
 
-        // Handle ground plane detection
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
+        // Update reticle position based on hit testing
         function updateReticle(event) {
             if (isPlaced) return;
 
@@ -139,14 +123,25 @@
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-            // Update raycaster
-            raycaster.setFromCamera(mouse, document.querySelector('[camera]').components.camera.camera);
+            // Get camera
+            const camera = document.querySelector('[camera]').components.camera.camera;
+            raycaster.setFromCamera(mouse, camera);
 
-            // Check for intersections with ground plane
-            const intersects = raycaster.intersectObject(ground.object3D, true);
+            // Get all planes in the scene
+            const planes = document.querySelectorAll('.arjs-plane');
+            
+            // Check for intersections
+            let foundIntersection = false;
+            for (let plane of planes) {
+                const intersects = raycaster.intersectObject(plane.object3D, true);
+                if (intersects.length > 0) {
+                    lastIntersection = intersects[0];
+                    foundIntersection = true;
+                    break;
+                }
+            }
 
-            if (intersects.length > 0) {
-                lastIntersection = intersects[0];
+            if (foundIntersection) {
                 reticle.style.display = 'block';
                 tapText.style.display = 'block';
                 info.textContent = 'Surface detected - Tap to place';
@@ -171,22 +166,20 @@
         });
 
         // Handle AR.js events
-        document.querySelector('a-scene').addEventListener('arjs-nft-loaded', function() {
+        scene.addEventListener('arjs-nft-loaded', function() {
             info.textContent = 'AR initialized successfully';
         });
 
-        document.querySelector('a-scene').addEventListener('camera-init', function() {
+        scene.addEventListener('camera-init', function() {
             info.textContent = 'Camera initialized';
-            ground.setAttribute('visible', true);
         });
 
-        document.querySelector('a-scene').addEventListener('camera-error', function(error) {
+        scene.addEventListener('camera-error', function(error) {
             info.textContent = 'Camera error: ' + error.detail.message;
         });
 
         // Handle window resize
         window.addEventListener('resize', function() {
-            const scene = document.querySelector('a-scene');
             if (scene) {
                 scene.setAttribute('arjs', {
                     sourceWidth: window.innerWidth,
@@ -195,6 +188,28 @@
                     displayHeight: window.innerHeight
                 });
             }
+        });
+
+        // Add plane detection
+        scene.addEventListener('markerFound', function(event) {
+            const marker = event.detail.target;
+            const markerRoot = marker.object3D;
+            
+            // Create a plane at the marker position
+            const plane = document.createElement('a-entity');
+            plane.setAttribute('class', 'arjs-plane');
+            plane.setAttribute('geometry', {
+                primitive: 'plane',
+                width: 1,
+                height: 1
+            });
+            plane.setAttribute('material', {
+                color: '#7BC8A4',
+                opacity: 0.5,
+                side: 'double'
+            });
+            plane.setAttribute('rotation', '-90 0 0');
+            markerRoot.add(plane.object3D);
         });
     </script>
 </body>
