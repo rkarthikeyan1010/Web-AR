@@ -18,4 +18,7 @@ A WebXR application that allows users to place images on detected ground planes 
 ## Requirements
 - WebXR-compatible device (Android with Chrome recommended)
 - HTTPS connection (except for localhost)
-- Camera and motion sensors 
+- Camera and motion sensors
+
+## Deployment
+This project is deployed using GitHub Pages at: https://rkarthikeyan1010.github.io/Web-AR/ 
