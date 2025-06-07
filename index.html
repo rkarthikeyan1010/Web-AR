@@ -2,23 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Web AR Image Placement</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Add iOS WebXR support -->
+    <!-- iOS specific meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- WebXR polyfill -->
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.js"></script>
 </head>
 <body>
     <div id="info">
         <h1>Web AR Image Placement</h1>
         <p>Tap on the detected ground plane to place an image</p>
         <div id="device-info"></div>
+        <div id="status-message"></div>
     </div>
     <div id="ar-button">
         <button id="start-ar">Start AR</button>
     </div>
     <div id="ar-view"></div>
+    <!-- Three.js and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/webxr/ARButton.js"></script>

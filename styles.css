@@ -3,18 +3,20 @@ body {
     padding: 0;
     font-family: Arial, sans-serif;
     overflow: hidden;
+    background-color: #000;
 }
 
 #info {
     position: fixed;
     top: 20px;
     left: 20px;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     color: white;
     padding: 15px;
     border-radius: 10px;
     z-index: 100;
     max-width: 80%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 #device-info {
@@ -26,6 +28,17 @@ body {
     margin: 5px 0;
     padding: 5px;
     border-radius: 5px;
+}
+
+#status-message {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #4CAF50;
+}
+
+#status-message p {
+    margin: 3px 0;
+    padding: 3px;
 }
 
 #ar-button {
@@ -44,11 +57,17 @@ body {
     border-radius: 25px;
     font-size: 16px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 #start-ar:hover {
     background: #45a049;
+    transform: scale(1.05);
+}
+
+#start-ar:active {
+    transform: scale(0.95);
 }
 
 #ar-view {
