@@ -35,6 +35,7 @@
             border-radius: 50%;
             pointer-events: none;
             z-index: 100;
+            animation: pulse 1.5s infinite;
         }
         #tap-text {
             position: fixed;
@@ -49,6 +50,11 @@
             font-family: sans-serif;
             z-index: 100;
         }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -58,7 +64,7 @@
 
     <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960;"
         renderer="logarithmicDepthBuffer: true;"
         vr-mode-ui="enabled: false">
 
@@ -69,6 +75,16 @@
 
         <!-- Camera -->
         <a-entity camera></a-entity>
+
+        <!-- Ground plane detection -->
+        <a-entity
+            id="ground"
+            material="color: #7BC8A4; opacity: 0.5; side: double"
+            geometry="primitive: plane; width: 100; height: 100"
+            rotation="-90 0 0"
+            position="0 0 0"
+            visible="false">
+        </a-entity>
 
         <!-- Image to be placed -->
         <a-image
@@ -89,21 +105,18 @@
         const tapText = document.getElementById('tap-text');
         const placedImage = document.getElementById('placedImage');
         const info = document.getElementById('info');
+        const ground = document.getElementById('ground');
 
         // Track if image is placed
         let isPlaced = false;
+        let lastIntersection = null;
 
         // Handle tap/click
-        document.addEventListener('click', function() {
-            if (!isPlaced) {
-                // Get camera position
-                const camera = document.querySelector('[camera]');
-                const cameraPosition = camera.getAttribute('position');
-                const cameraRotation = camera.getAttribute('rotation');
-
-                // Place image at camera position
-                placedImage.setAttribute('position', cameraPosition);
-                placedImage.setAttribute('rotation', cameraRotation);
+        document.addEventListener('click', function(event) {
+            if (!isPlaced && lastIntersection) {
+                // Place image at intersection point
+                placedImage.setAttribute('position', lastIntersection.point);
+                placedImage.setAttribute('rotation', '0 0 0');
                 placedImage.setAttribute('visible', true);
 
                 // Hide UI elements
@@ -113,6 +126,42 @@
 
                 isPlaced = true;
             }
+        });
+
+        // Handle ground plane detection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function updateReticle(event) {
+            if (isPlaced) return;
+
+            // Update mouse position
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update raycaster
+            raycaster.setFromCamera(mouse, document.querySelector('[camera]').components.camera.camera);
+
+            // Check for intersections with ground plane
+            const intersects = raycaster.intersectObject(ground.object3D, true);
+
+            if (intersects.length > 0) {
+                lastIntersection = intersects[0];
+                reticle.style.display = 'block';
+                tapText.style.display = 'block';
+                info.textContent = 'Surface detected - Tap to place';
+            } else {
+                reticle.style.display = 'none';
+                tapText.style.display = 'none';
+                info.textContent = 'Point at a flat surface';
+            }
+        }
+
+        // Add event listeners
+        document.addEventListener('mousemove', updateReticle);
+        document.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+            updateReticle(event.touches[0]);
         });
 
         // Handle errors
@@ -128,10 +177,24 @@
 
         document.querySelector('a-scene').addEventListener('camera-init', function() {
             info.textContent = 'Camera initialized';
+            ground.setAttribute('visible', true);
         });
 
         document.querySelector('a-scene').addEventListener('camera-error', function(error) {
             info.textContent = 'Camera error: ' + error.detail.message;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const scene = document.querySelector('a-scene');
+            if (scene) {
+                scene.setAttribute('arjs', {
+                    sourceWidth: window.innerWidth,
+                    sourceHeight: window.innerHeight,
+                    displayWidth: window.innerWidth,
+                    displayHeight: window.innerHeight
+                });
+            }
         });
     </script>
 </body>
