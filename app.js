@@ -5,7 +5,7 @@ let isPlaced = false;
 
 // Initialize AR Code
 const arCode = new ARCode({
-    apiKey: 'YOUR_API_KEY', // Replace with your ar-code.com API key
+    apiKey: '1r3L0EBt8ZQp', // Replace with your ar-code.com API key
     container: 'ar-container',
     onInit: () => {
         updateStatus('AR initialized successfully');
