@@ -1,5 +1,6 @@
 let debugMode = true;
 let placedImages = [];
+let markerVisible = false;
 
 // Debug logging function
 function debugLog(message) {
@@ -38,29 +39,68 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupAR() {
     const scene = document.querySelector('a-scene');
     const marker = document.querySelector('#marker');
-    const reticle = document.querySelector('#reticle');
+    const placementMarker = document.querySelector('#placement-marker');
 
     // Handle marker found
     marker.addEventListener('markerFound', () => {
         debugLog('Marker found');
-        reticle.setAttribute('visible', true);
+        markerVisible = true;
+        placementMarker.setAttribute('visible', true);
+        updateStatus('Marker found! Tap to place an image');
     });
 
     // Handle marker lost
     marker.addEventListener('markerLost', () => {
         debugLog('Marker lost');
-        reticle.setAttribute('visible', false);
+        markerVisible = false;
+        placementMarker.setAttribute('visible', false);
+        updateStatus('Point camera at the marker');
+    });
+
+    // Update placement marker position based on camera movement
+    scene.addEventListener('camera-tick', () => {
+        if (markerVisible) {
+            const camera = document.querySelector('[camera]');
+            const cameraPosition = camera.getAttribute('position');
+            const cameraRotation = camera.getAttribute('rotation');
+            
+            // Position the placement marker in front of the camera
+            placementMarker.setAttribute('position', {
+                x: cameraPosition.x,
+                y: cameraPosition.y,
+                z: cameraPosition.z - 1
+            });
+            
+            // Match camera rotation
+            placementMarker.setAttribute('rotation', {
+                x: cameraRotation.x,
+                y: cameraRotation.y,
+                z: cameraRotation.z
+            });
+        }
     });
 
     // Handle tap to place image
     scene.addEventListener('click', (event) => {
-        if (marker.object3D.visible) {
-            placeImage(event.detail.intersection.point);
+        if (markerVisible) {
+            const camera = document.querySelector('[camera]');
+            const cameraPosition = camera.getAttribute('position');
+            const cameraRotation = camera.getAttribute('rotation');
+            
+            // Calculate position in front of camera
+            const distance = 1; // 1 meter in front
+            const position = {
+                x: cameraPosition.x,
+                y: cameraPosition.y,
+                z: cameraPosition.z - distance
+            };
+            
+            placeImage(position, cameraRotation);
         }
     });
 }
 
-function placeImage(position) {
+function placeImage(position, rotation) {
     debugLog('Placing image...');
     
     // Create a new image entity
@@ -69,17 +109,18 @@ function placeImage(position) {
     image.setAttribute('width', '1');
     image.setAttribute('height', '1');
     image.setAttribute('position', position);
-    image.setAttribute('rotation', '-90 0 0');
+    image.setAttribute('rotation', rotation);
     image.setAttribute('animation', 'property: scale; from: 0 0 0; to: 1 1 1; dur: 500; easing: easeOutElastic');
     
-    // Add the image to the marker
-    const marker = document.querySelector('#marker');
-    marker.appendChild(image);
+    // Add the image to the scene
+    const scene = document.querySelector('a-scene');
+    scene.appendChild(image);
     
     // Store reference to placed image
     placedImages.push(image);
     
     debugLog('Image placed successfully');
+    updateStatus('Image placed! Tap to place another');
 }
 
 // Handle window resize

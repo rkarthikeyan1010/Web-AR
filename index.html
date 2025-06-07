@@ -31,10 +31,16 @@
             <!-- This will be our anchor point for placing images -->
         </a-marker>
 
-        <!-- Add a reticle for surface detection -->
-        <a-entity id="reticle" position="0 0 -1" visible="false">
-            <a-ring color="#FFFFFF" radius-inner="0.02" radius-outer="0.03"></a-ring>
+        <!-- Add a placement marker -->
+        <a-entity id="placement-marker" position="0 0 -1" visible="false">
+            <a-ring color="#4CC3D9" radius-inner="0.02" radius-outer="0.03"></a-ring>
+            <a-ring color="#4CC3D9" radius-inner="0.04" radius-outer="0.05"></a-ring>
+            <a-ring color="#4CC3D9" radius-inner="0.06" radius-outer="0.07"></a-ring>
         </a-entity>
+
+        <!-- Add a light to the scene -->
+        <a-light type="ambient" color="#888888"></a-light>
+        <a-light type="directional" position="0 1 1" color="#ffffff"></a-light>
     </a-scene>
 
     <script src="app.js"></script>
