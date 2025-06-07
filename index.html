@@ -10,7 +10,14 @@
     <!-- Three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <!-- AR Code SDK -->
-    <script src="https://ar-code.com/sdk/ar-code.min.js"></script>
+    <script src="https://ar-code.com/sdk/ar-code.min.js" onerror="handleSDKError()"></script>
+    <script>
+        function handleSDKError() {
+            console.error('Failed to load AR Code SDK');
+            document.getElementById('status-message').innerHTML = 
+                '<p class="error">Failed to load AR SDK. Please check your internet connection and try again.</p>';
+        }
+    </script>
 </head>
 <body>
     <div id="info">

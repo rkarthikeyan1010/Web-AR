@@ -3,20 +3,72 @@ let reticle;
 let placementUI;
 let isPlaced = false;
 
+// Debug function
+function debug(message) {
+    console.log('[AR Debug]', message);
+    updateStatus(message);
+}
+
 // Initialize AR Code
-const arCode = new ARCode({
-    apiKey: '1r3L0EBt8ZQp', // Replace with your ar-code.com API key
-    container: 'ar-container',
-    onInit: () => {
-        updateStatus('AR initialized successfully');
-    },
-    onError: (error) => {
-        updateStatus('Error initializing AR: ' + error.message);
-        console.error('AR initialization error:', error);
-    }
-});
+try {
+    debug('Initializing AR Code SDK...');
+    const arCode = new ARCode({
+        apiKey: '1r3L0EBt8ZQp',
+        container: 'ar-container',
+        onInit: () => {
+            debug('AR Code SDK initialized successfully');
+            updateStatus('AR initialized successfully');
+        },
+        onError: (error) => {
+            debug('AR initialization error: ' + error.message);
+            console.error('AR initialization error:', error);
+            updateStatus('Error initializing AR: ' + error.message);
+        }
+    });
+
+    // Set up AR Code event listeners
+    arCode.on('surfaceFound', (surface) => {
+        debug('Surface found');
+        reticle.visible = true;
+        reticle.position.copy(surface.position);
+        reticle.quaternion.copy(surface.quaternion);
+        placementUI.classList.remove('hidden');
+        updateStatus('Surface detected! Tap to place content.');
+    });
+
+    arCode.on('surfaceLost', () => {
+        debug('Surface lost');
+        reticle.visible = false;
+        placementUI.classList.add('hidden');
+        if (!isPlaced) {
+            updateStatus('Move device to find a surface...');
+        }
+    });
+
+    arCode.on('tap', (position) => {
+        debug('Tap detected');
+        if (!isPlaced && reticle.visible) {
+            placeImage(position);
+        }
+    });
+
+    // Start AR session
+    debug('Starting AR session...');
+    arCode.start().then(() => {
+        debug('AR session started successfully');
+    }).catch(error => {
+        debug('Failed to start AR session: ' + error.message);
+        console.error('AR session start error:', error);
+    });
+
+} catch (error) {
+    debug('Failed to initialize AR Code: ' + error.message);
+    console.error('AR Code initialization error:', error);
+    updateStatus('Failed to initialize AR. Please check console for details.');
+}
 
 function init() {
+    debug('Initializing Three.js scene...');
     const container = document.getElementById('ar-container');
     scene = new THREE.Scene();
 
@@ -49,34 +101,10 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
-    // Set up AR Code event listeners
-    arCode.on('surfaceFound', (surface) => {
-        reticle.visible = true;
-        reticle.position.copy(surface.position);
-        reticle.quaternion.copy(surface.quaternion);
-        placementUI.classList.remove('hidden');
-        updateStatus('Surface detected! Tap to place content.');
-    });
-
-    arCode.on('surfaceLost', () => {
-        reticle.visible = false;
-        placementUI.classList.add('hidden');
-        if (!isPlaced) {
-            updateStatus('Move device to find a surface...');
-        }
-    });
-
-    arCode.on('tap', (position) => {
-        if (!isPlaced && reticle.visible) {
-            placeImage(position);
-        }
-    });
-
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
 
-    // Start the AR session
-    arCode.start();
+    debug('Three.js scene initialized');
 }
 
 function onWindowResize() {
@@ -142,4 +170,7 @@ function updateStatus(message) {
 }
 
 // Initialize when the page loads
-window.addEventListener('load', init); 
+window.addEventListener('load', () => {
+    debug('Page loaded, starting initialization...');
+    init();
+}); 
