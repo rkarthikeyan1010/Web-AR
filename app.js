@@ -8,7 +8,49 @@ let isPlaced = false;
 // Initialize WebXR Polyfill
 const polyfill = new WebXRPolyfill();
 
+// Check device compatibility
+function checkDeviceCompatibility() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isChrome = /Chrome/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+
+    let deviceInfo = '';
+    let isCompatible = false;
+
+    if (isIOS) {
+        if (isSafari) {
+            deviceInfo = 'iOS Safari detected. For best experience, please use Chrome on Android or try the WebXR Viewer app on iOS.';
+        } else {
+            deviceInfo = 'iOS device detected. Please use Safari browser for testing.';
+        }
+    } else if (isAndroid) {
+        if (isChrome) {
+            deviceInfo = 'Android Chrome detected. AR should work on this device.';
+            isCompatible = true;
+        } else {
+            deviceInfo = 'Android device detected. Please use Chrome browser for best experience.';
+        }
+    } else {
+        deviceInfo = 'Desktop device detected. Please use a mobile device for AR experience.';
+    }
+
+    updateDeviceInfo(deviceInfo);
+    return isCompatible;
+}
+
+function updateDeviceInfo(message) {
+    const deviceInfoElement = document.getElementById('device-info');
+    if (deviceInfoElement) {
+        deviceInfoElement.innerHTML = `<p>${message}</p>`;
+    }
+}
+
 function init() {
+    if (!checkDeviceCompatibility()) {
+        updateStatus('Your device may not be fully compatible with WebXR. Some features may be limited.');
+    }
+
     const container = document.getElementById('ar-container');
     scene = new THREE.Scene();
 
@@ -42,12 +84,18 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
-    // Add AR Button
-    document.body.appendChild(ARButton.createButton(renderer, { 
-        requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay'],
-        domOverlay: { root: document.getElementById('placement-ui') }
-    }));
+    // Add AR Button with error handling
+    try {
+        const arButton = ARButton.createButton(renderer, { 
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['dom-overlay'],
+            domOverlay: { root: document.getElementById('placement-ui') }
+        });
+        document.body.appendChild(arButton);
+    } catch (error) {
+        updateStatus('AR not supported on this device. Please try a different browser or device.');
+        console.error('AR Button creation failed:', error);
+    }
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -153,6 +201,12 @@ function updateStatus(message) {
     const statusElement = document.getElementById('status-message');
     if (statusElement) {
         statusElement.innerHTML = `<p>${message}</p>`;
+        // Add appropriate styling class
+        if (message.includes('error') || message.includes('not supported')) {
+            statusElement.classList.add('error');
+        } else if (message.includes('success')) {
+            statusElement.classList.add('success');
+        }
     }
 }
 
