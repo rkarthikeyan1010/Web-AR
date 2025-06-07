@@ -11,57 +11,70 @@ function debug(message) {
     updateStatus(message);
 }
 
-function init() {
-    // Create scene
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+async function init() {
+    try {
+        // Request camera permission first
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream after getting permission
 
-    // Create renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.getElementById('ar-container').appendChild(renderer.domElement);
+        // Create scene
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-    // Add light
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    light.position.set(0.5, 1, 0.25);
-    scene.add(light);
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.getElementById('ar-container').appendChild(renderer.domElement);
 
-    // Get UI elements
-    placementUI = document.getElementById('placement-ui');
+        // Add light
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        light.position.set(0.5, 1, 0.25);
+        scene.add(light);
 
-    // Create reticle
-    reticle = new THREE.Mesh(
-        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial({ color: 0x4CC3D9 })
-    );
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
+        // Get UI elements
+        placementUI = document.getElementById('placement-ui');
 
-    // Add AR button
-    document.body.appendChild(THREE.ARButton.createButton(renderer, {
-        onUnsupported: () => {
-            updateStatus('AR is not supported on your device');
-        }
-    }));
+        // Create reticle
+        reticle = new THREE.Mesh(
+            new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial({ color: 0x4CC3D9 })
+        );
+        reticle.matrixAutoUpdate = false;
+        reticle.visible = false;
+        scene.add(reticle);
 
-    // Handle window resize
-    window.addEventListener('resize', onWindowResize, false);
+        // Add AR button
+        const arButton = THREE.ARButton.createButton(renderer, {
+            onUnsupported: () => {
+                updateStatus('AR is not supported on your device');
+            },
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['dom-overlay'],
+            domOverlay: { root: document.getElementById('placement-ui') }
+        });
+        document.body.appendChild(arButton);
 
-    // Set up AR session
-    renderer.xr.addEventListener('sessionstart', onSessionStart);
-    renderer.xr.addEventListener('sessionend', onSessionEnd);
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
 
-    // Start animation loop
-    renderer.setAnimationLoop(render);
+        // Set up AR session
+        renderer.xr.addEventListener('sessionstart', onSessionStart);
+        renderer.xr.addEventListener('sessionend', onSessionEnd);
 
-    debug('Three.js scene initialized');
+        // Start animation loop
+        renderer.setAnimationLoop(render);
+
+        updateStatus('AR initialized successfully');
+    } catch (error) {
+        console.error('Error initializing AR:', error);
+        updateStatus('Error: ' + error.message);
+    }
 }
 
 function onSessionStart() {
-    updateStatus('AR session started');
+    updateStatus('AR session started - Point at a surface');
     placementUI.style.display = 'block';
 }
 
@@ -170,6 +183,7 @@ function updateStatus(message) {
             statusElement.classList.add('success');
         }
     }
+    console.log('Status:', message);
 }
 
 // Add tap handler
