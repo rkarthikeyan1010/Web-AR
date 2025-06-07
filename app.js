@@ -1,9 +1,5 @@
 let scene, camera, renderer;
 let reticle;
-let hitTestSource = null;
-let hitTestSourceRequested = false;
-let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-let isAndroid = /Android/.test(navigator.userAgent);
 let debugMode = true;
 
 // Debug logging function
@@ -22,11 +18,11 @@ function updateStatus(message) {
     }
 }
 
-init();
-animate();
+// Initialize the AR experience
+window.XR8 ? init() : window.addEventListener('xrloaded', init);
 
 function init() {
-    debugLog('Initializing Web AR application...');
+    debugLog('Initializing AR experience...');
     
     // Create scene
     scene = new THREE.Scene();
@@ -34,14 +30,12 @@ function init() {
     
     // Create renderer
     renderer = new THREE.WebGLRenderer({ 
+        canvas: document.getElementById('camerafeed'),
         antialias: true, 
-        alpha: true,
-        powerPreference: 'high-performance'
+        alpha: true
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.getElementById('ar-view').appendChild(renderer.domElement);
 
     // Add light
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
@@ -57,9 +51,6 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
-    // Check device compatibility
-    checkDeviceCompatibility();
-
     // Add AR button
     const startButton = document.getElementById('start-ar');
     if (startButton) {
@@ -68,130 +59,56 @@ function init() {
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
+
+    // Set up 8th Wall
+    XR8.addCameraPipelineModules([
+        // Add camera pipeline modules
+        XR8.GlTextureRenderer.pipelineModule(),
+        XR8.Threejs.pipelineModule(),
+        XR8.XrController.pipelineModule(),
+        XR8.PipelineModule({
+            name: 'surface-detection',
+            onUpdate: () => {
+                const {camera} = XR8.Threejs.xrScene();
+                if (camera) {
+                    const hitTestResults = XR8.XrController.hitTest(0, 0);
+                    if (hitTestResults.length > 0) {
+                        const hit = hitTestResults[0];
+                        reticle.visible = true;
+                        reticle.matrix.fromArray(hit.transform);
+                    } else {
+                        reticle.visible = false;
+                    }
+                }
+            }
+        })
+    ]);
+
+    // Handle tap to place
+    XR8.addCameraPipelineModules([
+        XR8.PipelineModule({
+            name: 'tap-to-place',
+            onUpdate: () => {
+                if (XR8.XrController.isTapped()) {
+                    const hitTestResults = XR8.XrController.hitTest(0, 0);
+                    if (hitTestResults.length > 0) {
+                        placeImage(hitTestResults[0].transform);
+                    }
+                }
+            }
+        })
+    ]);
 }
 
 function startAR() {
-    debugLog('Starting AR session...');
-    
-    if (navigator.xr) {
-        navigator.xr.isSessionSupported('immersive-ar')
-            .then((supported) => {
-                if (supported) {
-                    debugLog('AR is supported on this device');
-                    const button = ARButton.createButton(renderer, {
-                        onUnsupported: () => {
-                            showMessage('WebXR not supported on this device. Please use a compatible browser.');
-                        }
-                    });
-                    const arButtonContainer = document.getElementById('ar-button');
-                    if (arButtonContainer) {
-                        arButtonContainer.innerHTML = '';
-                        arButtonContainer.appendChild(button);
-                    }
-                } else {
-                    handleUnsupportedDevice();
-                }
-            })
-            .catch((error) => {
-                debugLog('Error checking AR support: ' + error);
-                handleUnsupportedDevice();
-            });
-    } else {
-        debugLog('WebXR not available');
-        handleUnsupportedDevice();
-    }
-}
-
-function handleUnsupportedDevice() {
-    if (isIOS) {
-        showMessage('Please use WebXR Viewer app on iOS devices. Download from the App Store.');
-    } else if (isAndroid) {
-        showMessage('Please use Chrome browser on Android devices.');
-    } else {
-        showMessage('WebXR is not supported on your device');
-    }
-}
-
-function checkDeviceCompatibility() {
-    const deviceInfo = document.getElementById('device-info');
-    if (!deviceInfo) return;
-
-    if (isIOS) {
-        deviceInfo.innerHTML = '<p style="color: #ff6b6b;">iOS detected: Please use WebXR Viewer app from the App Store</p>';
-    } else if (isAndroid) {
-        deviceInfo.innerHTML = '<p style="color: #4CAF50;">Android detected: Chrome browser recommended</p>';
-    } else {
-        deviceInfo.innerHTML = '<p style="color: #ff6b6b;">Desktop detected: Please use a mobile device</p>';
-    }
-}
-
-function showMessage(message) {
-    debugLog(message);
-    const deviceInfo = document.getElementById('device-info');
-    if (deviceInfo) {
-        deviceInfo.innerHTML = `<p style="color: #ff6b6b;">${message}</p>`;
-    }
+    debugLog('Starting AR...');
+    XR8.start();
 }
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function animate() {
-    renderer.setAnimationLoop(render);
-}
-
-function render(timestamp, frame) {
-    if (frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const session = renderer.xr.getSession();
-
-        if (hitTestSourceRequested === false) {
-            session.requestReferenceSpace('viewer')
-                .then((referenceSpace) => {
-                    return session.requestHitTestSource({ space: referenceSpace });
-                })
-                .then((source) => {
-                    hitTestSource = source;
-                    debugLog('Hit test source created');
-                })
-                .catch((error) => {
-                    debugLog('Error creating hit test source: ' + error);
-                });
-
-            session.addEventListener('end', () => {
-                hitTestSourceRequested = false;
-                hitTestSource = null;
-                debugLog('AR session ended');
-            });
-
-            hitTestSourceRequested = true;
-        }
-
-        if (hitTestSourceRequested === true && hitTestSource) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource);
-
-            if (hitTestResults.length > 0) {
-                const hit = hitTestResults[0];
-                const pose = hit.getPose(referenceSpace);
-
-                reticle.visible = true;
-                reticle.matrix.fromArray(pose.transform.matrix);
-
-                // Handle tap to place image
-                if (session.inputSources[0] && session.inputSources[0].gamepad) {
-                    const gamepad = session.inputSources[0].gamepad;
-                    if (gamepad.buttons[0].pressed) {
-                        placeImage(pose.transform.matrix);
-                    }
-                }
-            } else {
-                reticle.visible = false;
-            }
-        }
-    }
 }
 
 function placeImage(matrix) {
