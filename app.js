@@ -11,52 +11,83 @@ function debug(message) {
     updateStatus(message);
 }
 
-function init() {
-    // Create scene
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-    // Create renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.getElementById('ar-container').appendChild(renderer.domElement);
-
-    // Add light
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    light.position.set(0.5, 1, 0.25);
-    scene.add(light);
-
-    // Get UI elements
-    placementUI = document.getElementById('placement-ui');
-
-    // Create reticle
-    reticle = new THREE.Mesh(
-        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial({ color: 0x4CC3D9 })
-    );
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
-
-    // Add AR button
-    const arButton = THREE.ARButton.createButton(renderer, {
-        onUnsupported: () => {
-            updateStatus('AR is not supported on your device');
+async function init() {
+    try {
+        // First check if WebXR is supported
+        if (!navigator.xr) {
+            throw new Error('WebXR not supported');
         }
-    });
-    document.body.appendChild(arButton);
 
-    // Handle window resize
-    window.addEventListener('resize', onWindowResize, false);
+        // Request camera permission explicitly
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            } 
+        });
+        
+        // Stop the stream after getting permission
+        stream.getTracks().forEach(track => track.stop());
 
-    // Set up AR session
-    renderer.xr.addEventListener('sessionstart', onSessionStart);
-    renderer.xr.addEventListener('sessionend', onSessionEnd);
+        // Create scene
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-    // Start animation loop
-    renderer.setAnimationLoop(render);
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.getElementById('ar-container').appendChild(renderer.domElement);
+
+        // Add light
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        light.position.set(0.5, 1, 0.25);
+        scene.add(light);
+
+        // Get UI elements
+        placementUI = document.getElementById('placement-ui');
+
+        // Create reticle
+        reticle = new THREE.Mesh(
+            new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial({ color: 0x4CC3D9 })
+        );
+        reticle.matrixAutoUpdate = false;
+        reticle.visible = false;
+        scene.add(reticle);
+
+        // Add AR button with specific features
+        const arButton = THREE.ARButton.createButton(renderer, {
+            onUnsupported: () => {
+                updateStatus('AR is not supported on your device');
+            },
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['dom-overlay'],
+            domOverlay: { root: document.getElementById('placement-ui') }
+        });
+        document.body.appendChild(arButton);
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+
+        // Set up AR session
+        renderer.xr.addEventListener('sessionstart', onSessionStart);
+        renderer.xr.addEventListener('sessionend', onSessionEnd);
+
+        // Start animation loop
+        renderer.setAnimationLoop(render);
+
+        updateStatus('AR initialized successfully');
+    } catch (error) {
+        console.error('Error initializing AR:', error);
+        updateStatus('Error: ' + error.message);
+    }
 }
 
 function onSessionStart() {
