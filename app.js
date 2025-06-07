@@ -1,56 +1,22 @@
 let camera, scene, renderer;
 let reticle;
-let hitTestSource = null;
-let hitTestSourceRequested = false;
 let placementUI;
 let isPlaced = false;
 
-// Initialize WebXR Polyfill
-const polyfill = new WebXRPolyfill();
-
-// Check device compatibility
-function checkDeviceCompatibility() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isChrome = /Chrome/.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-
-    let deviceInfo = '';
-    let isCompatible = false;
-
-    if (isIOS) {
-        if (isSafari) {
-            deviceInfo = 'iOS Safari detected. For best experience, please use Chrome on Android or try the WebXR Viewer app on iOS.';
-        } else {
-            deviceInfo = 'iOS device detected. Please use Safari browser for testing.';
-        }
-    } else if (isAndroid) {
-        if (isChrome) {
-            deviceInfo = 'Android Chrome detected. AR should work on this device.';
-            isCompatible = true;
-        } else {
-            deviceInfo = 'Android device detected. Please use Chrome browser for best experience.';
-        }
-    } else {
-        deviceInfo = 'Desktop device detected. Please use a mobile device for AR experience.';
+// Initialize AR Code
+const arCode = new ARCode({
+    apiKey: 'YOUR_API_KEY', // Replace with your ar-code.com API key
+    container: 'ar-container',
+    onInit: () => {
+        updateStatus('AR initialized successfully');
+    },
+    onError: (error) => {
+        updateStatus('Error initializing AR: ' + error.message);
+        console.error('AR initialization error:', error);
     }
-
-    updateDeviceInfo(deviceInfo);
-    return isCompatible;
-}
-
-function updateDeviceInfo(message) {
-    const deviceInfoElement = document.getElementById('device-info');
-    if (deviceInfoElement) {
-        deviceInfoElement.innerHTML = `<p>${message}</p>`;
-    }
-}
+});
 
 function init() {
-    if (!checkDeviceCompatibility()) {
-        updateStatus('Your device may not be fully compatible with WebXR. Some features may be limited.');
-    }
-
     const container = document.getElementById('ar-container');
     scene = new THREE.Scene();
 
@@ -64,7 +30,6 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
 
     // Add light
@@ -84,24 +49,34 @@ function init() {
     reticle.visible = false;
     scene.add(reticle);
 
-    // Add AR Button with error handling
-    try {
-        const arButton = ARButton.createButton(renderer, { 
-            requiredFeatures: ['hit-test'],
-            optionalFeatures: ['dom-overlay'],
-            domOverlay: { root: document.getElementById('placement-ui') }
-        });
-        document.body.appendChild(arButton);
-    } catch (error) {
-        updateStatus('AR not supported on this device. Please try a different browser or device.');
-        console.error('AR Button creation failed:', error);
-    }
+    // Set up AR Code event listeners
+    arCode.on('surfaceFound', (surface) => {
+        reticle.visible = true;
+        reticle.position.copy(surface.position);
+        reticle.quaternion.copy(surface.quaternion);
+        placementUI.classList.remove('hidden');
+        updateStatus('Surface detected! Tap to place content.');
+    });
+
+    arCode.on('surfaceLost', () => {
+        reticle.visible = false;
+        placementUI.classList.add('hidden');
+        if (!isPlaced) {
+            updateStatus('Move device to find a surface...');
+        }
+    });
+
+    arCode.on('tap', (position) => {
+        if (!isPlaced && reticle.visible) {
+            placeImage(position);
+        }
+    });
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
 
     // Start the AR session
-    renderer.setAnimationLoop(render);
+    arCode.start();
 }
 
 function onWindowResize() {
@@ -110,51 +85,7 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function render(timestamp, frame) {
-    if (frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const session = renderer.xr.getSession();
-
-        if (!hitTestSourceRequested) {
-            session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                session.requestHitTestSource({ space: referenceSpace }).then((source) => {
-                    hitTestSource = source;
-                });
-            });
-
-            session.addEventListener('end', () => {
-                hitTestSourceRequested = false;
-                hitTestSource = null;
-                placementUI.classList.add('hidden');
-            });
-
-            hitTestSourceRequested = true;
-        }
-
-        if (hitTestSource) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource);
-
-            if (hitTestResults.length > 0) {
-                const hit = hitTestResults[0];
-                const pose = hit.getPose(referenceSpace);
-
-                reticle.visible = true;
-                reticle.matrix.fromArray(pose.transform.matrix);
-                placementUI.classList.remove('hidden');
-                updateStatus('Surface detected! Tap to place content.');
-            } else {
-                reticle.visible = false;
-                placementUI.classList.add('hidden');
-                if (!isPlaced) {
-                    updateStatus('Move device to find a surface...');
-                }
-            }
-        }
-    }
-    renderer.render(scene, camera);
-}
-
-function placeImage(matrix) {
+function placeImage(position) {
     // Hide placement UI
     placementUI.classList.add('hidden');
     isPlaced = true;
@@ -169,8 +100,8 @@ function placeImage(matrix) {
     });
     
     const plane = new THREE.Mesh(geometry, material);
-    plane.matrix.fromArray(matrix);
-    plane.matrix.decompose(plane.position, plane.quaternion, plane.scale);
+    plane.position.copy(position);
+    plane.quaternion.copy(reticle.quaternion);
 
     // Add animation
     plane.scale.set(0, 0, 0);
