@@ -3,46 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AR Image Placement</title>
+    <title>WebXR Ground Plane AR</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- AR.js -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- ARButton.js for WebXR -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/ARButton.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body>
     <div id="info">
-        <h1>AR Image Placement</h1>
-        <p>Point at a surface and tap to place an image</p>
+        <h1>WebXR Ground Plane AR</h1>
+        <p>Move your device to detect a surface. Tap to place an image.</p>
         <div id="status-message"></div>
     </div>
-
-    <a-scene
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-        renderer="logarithmicDepthBuffer: true;"
-        vr-mode-ui="enabled: false">
-
-        <!-- Define the AR camera -->
-        <a-entity camera></a-entity>
-
-        <!-- Add a marker for surface detection -->
-        <a-marker preset="hiro" id="marker">
-            <!-- This will be our anchor point for placing images -->
-        </a-marker>
-
-        <!-- Add a placement marker -->
-        <a-entity id="placement-marker" position="0 0 -1" visible="false">
-            <a-ring color="#4CC3D9" radius-inner="0.02" radius-outer="0.03"></a-ring>
-            <a-ring color="#4CC3D9" radius-inner="0.04" radius-outer="0.05"></a-ring>
-            <a-ring color="#4CC3D9" radius-inner="0.06" radius-outer="0.07"></a-ring>
-        </a-entity>
-
-        <!-- Add a light to the scene -->
-        <a-light type="ambient" color="#888888"></a-light>
-        <a-light type="directional" position="0 1 1" color="#ffffff"></a-light>
-    </a-scene>
-
+    <div id="ar-container"></div>
     <script src="app.js"></script>
 </body>
 </html> 
