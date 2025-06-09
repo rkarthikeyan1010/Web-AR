@@ -14,23 +14,19 @@
         .a-enter-vr-button {
             display: none !important;
         }
-        #arjs-video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-        }
     </style>
 </head>
 <body>
     <a-scene embedded 
         arjs="sourceType: webcam; 
-              debugUIEnabled: true; 
-              detectionMode: mono; 
-              sourceWidth: 640;
-              sourceHeight: 480;
-              displayWidth: 640;
-              displayHeight: 480;
-              maxDetectionRate: 30;
+              debugUIEnabled: false; 
+              detectionMode: mono_and_matrix; 
+              matrixCodeType: 3x3;
+              sourceWidth: 1280;
+              sourceHeight: 720;
+              displayWidth: 1280;
+              displayHeight: 720;
+              maxDetectionRate: 60;
               canvasWidth: window.innerWidth;
               canvasHeight: window.innerHeight;
               cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;">
@@ -38,47 +34,18 @@
         <!-- Define the marker -->
         <a-marker preset="hiro" 
                   smooth="true" 
-                  smoothCount="10" 
+                  smoothCount="5" 
                   smoothTolerance="0.01" 
-                  smoothThreshold="5"
-                  raycaster="objects: .clickable"
-                  emitevents="true">
+                  smoothThreshold="5">
             <!-- Create a rotating cube -->
             <a-box position="0 0.5 0" 
                    material="color: #FF0000; opacity: 0.7;"
-                   animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear;"
-                   class="clickable">
+                   animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear;">
             </a-box>
         </a-marker>
         
         <!-- Add a camera -->
         <a-entity camera></a-entity>
     </a-scene>
-
-    <!-- Loading indicator -->
-    <div id="loading" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                            background: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 10px; 
-                            display: none;">
-        Loading AR...
-    </div>
-
-    <script>
-        // Show loading indicator
-        document.getElementById('loading').style.display = 'block';
-
-        // Hide loading indicator when scene is ready
-        document.querySelector('a-scene').addEventListener('loaded', function () {
-            document.getElementById('loading').style.display = 'none';
-        });
-
-        // Handle marker found/lost events
-        document.querySelector('a-marker').addEventListener('markerFound', function() {
-            console.log('Marker found!');
-        });
-
-        document.querySelector('a-marker').addEventListener('markerLost', function() {
-            console.log('Marker lost!');
-        });
-    </script>
 </body>
 </html> 
