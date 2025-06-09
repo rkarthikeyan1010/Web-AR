@@ -32,21 +32,21 @@
                            matrixCodeType: 3x3;
                            maxDetectionRate: 60;
                            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
-                           minConfidence: 0.6;
-                           smoothCount: 5;
-                           smoothTolerance: 0.01;
-                           smoothThreshold: 2;">
+                           minConfidence: 0.4;
+                           smoothCount: 10;
+                           smoothTolerance: 0.05;
+                           smoothThreshold: 5;">
         <!-- Define the Hiro marker -->
         <a-marker preset="hiro"
                   smooth="true" 
-                  smoothCount="5" 
-                  smoothTolerance="0.01" 
-                  smoothThreshold="2"
+                  smoothCount="10" 
+                  smoothTolerance="0.05" 
+                  smoothThreshold="5"
                   raycaster="objects: .clickable"
                   emitevents="true">
             <!-- Butterfly 3D Model -->
             <a-entity position="0 0.5 0"
-                      scale="0.125 0.125 0.125"
+                      scale="0.0875 0.0875 0.0875"
                       rotation="0 0 0"
                       gltf-model="assets/models/Butterfly_Blender.glb">
             </a-entity>
