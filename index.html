@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebAR Cube Demo</title>
+    <title>WebAR Custom Marker Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -35,11 +35,20 @@
                            smoothCount: 5;
                            smoothTolerance: 0.01;
                            smoothThreshold: 2;">
-        <!-- Define the marker -->
-        <a-marker preset="hiro" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2">
+        <!-- Define the custom marker -->
+        <a-marker type="pattern" 
+                  preset="custom"
+                  url="assets/markers/custom-marker.patt"
+                  smooth="true" 
+                  smoothCount="5" 
+                  smoothTolerance="0.01" 
+                  smoothThreshold="2"
+                  raycaster="objects: .clickable"
+                  emitevents="true">
             <!-- Create a rotating cube -->
             <a-box position="0 0.5 0" 
                    material="color: #FF0000; opacity: 0.7;"
+                   class="clickable"
                    animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear;">
             </a-box>
         </a-marker>
@@ -80,6 +89,15 @@
                 }
             });
         }
+
+        // Add marker found/lost events
+        const marker = document.querySelector('a-marker');
+        marker.addEventListener('markerFound', () => {
+            console.log('Custom marker found!');
+        });
+        marker.addEventListener('markerLost', () => {
+            console.log('Custom marker lost!');
+        });
     </script>
 </body>
 </html> 
