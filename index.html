@@ -32,16 +32,20 @@
                            matrixCodeType: 3x3;
                            maxDetectionRate: 60;
                            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
-                           minConfidence: 0.4;
-                           smoothCount: 10;
-                           smoothTolerance: 0.05;
-                           smoothThreshold: 5;">
+                           minConfidence: 0.3;
+                           smoothCount: 15;
+                           smoothTolerance: 0.1;
+                           smoothThreshold: 8;
+                           sourceWidth: 1280;
+                           sourceHeight: 720;
+                           displayWidth: 1280;
+                           displayHeight: 720;">
         <!-- Define the Hiro marker -->
         <a-marker preset="hiro"
                   smooth="true" 
-                  smoothCount="10" 
-                  smoothTolerance="0.05" 
-                  smoothThreshold="5"
+                  smoothCount="15" 
+                  smoothTolerance="0.1" 
+                  smoothThreshold="8"
                   raycaster="objects: .clickable"
                   emitevents="true">
             <!-- Butterfly 3D Model -->
@@ -74,7 +78,8 @@
                             width: { ideal: 1280 },
                             height: { ideal: 720 },
                             facingMode: 'environment',
-                            focusMode: 'continuous'
+                            focusMode: 'continuous',
+                            exposureMode: 'continuous'
                         }
                     };
 
