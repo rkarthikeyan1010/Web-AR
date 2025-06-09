@@ -47,12 +47,14 @@
                   smoothTolerance="0.1" 
                   smoothThreshold="8"
                   raycaster="objects: .clickable"
-                  emitevents="true">
+                  emitevents="true"
+                  id="marker">
             <!-- Butterfly 3D Model -->
             <a-entity position="0 0.5 0"
                       scale="0.0875 0.0875 0.0875"
                       rotation="0 0 0"
-                      gltf-model="assets/models/Butterfly_Blender.glb">
+                      gltf-model="assets/models/Butterfly_Blender.glb"
+                      id="butterfly">
             </a-entity>
         </a-marker>
         
@@ -94,14 +96,35 @@
             });
         }
 
-        // Add marker found/lost events
-        const marker = document.querySelector('a-marker');
+        // Add marker found/lost events and handle marker movement
+        const marker = document.querySelector('#marker');
+        const butterfly = document.querySelector('#butterfly');
+
         marker.addEventListener('markerFound', () => {
             console.log('Hiro marker found!');
+            // Ensure the butterfly is visible when marker is found
+            butterfly.setAttribute('visible', true);
         });
+
         marker.addEventListener('markerLost', () => {
             console.log('Hiro marker lost!');
+            // Hide the butterfly when marker is lost
+            butterfly.setAttribute('visible', false);
         });
+
+        // Add a component to handle marker movement
+        AFRAME.registerComponent('marker-handler', {
+            init: function() {
+                this.el.addEventListener('markerFound', () => {
+                    // Reset any previous transformations
+                    this.el.object3D.rotation.set(0, 0, 0);
+                    this.el.object3D.position.set(0, 0, 0);
+                });
+            }
+        });
+
+        // Add the marker-handler component to the marker
+        marker.setAttribute('marker-handler', '');
     </script>
 </body>
 </html> 
