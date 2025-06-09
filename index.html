@@ -14,10 +14,13 @@
         .a-enter-vr-button {
             display: none !important;
         }
-        #arjs-video {
+        /* Android-specific styles */
+        .android-ar #arjs-video {
             width: 100% !important;
             height: 100% !important;
             object-fit: cover !important;
+            transform: scale(1.5) !important;
+            transform-origin: center center !important;
         }
     </style>
 </head>
@@ -26,13 +29,7 @@
                            debugUIEnabled: false; 
                            detectionMode: mono_and_matrix; 
                            matrixCodeType: 3x3;
-                           sourceWidth: 640;
-                           sourceHeight: 480;
-                           displayWidth: 640;
-                           displayHeight: 480;
                            maxDetectionRate: 60;
-                           canvasWidth: 640;
-                           canvasHeight: 480;
                            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
                            minConfidence: 0.6;
                            smoothCount: 5;
@@ -56,13 +53,30 @@
         const isAndroid = /Android/i.test(navigator.userAgent);
         
         if (isAndroid) {
+            // Add Android-specific class to body
+            document.body.classList.add('android-ar');
+            
             // Adjust video element for Android
             window.addEventListener('load', () => {
                 const video = document.querySelector('#arjs-video');
                 if (video) {
-                    video.style.width = '100%';
-                    video.style.height = '100%';
-                    video.style.objectFit = 'cover';
+                    // Set Android-specific video constraints
+                    const constraints = {
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'environment',
+                            focusMode: 'continuous'
+                        }
+                    };
+
+                    // Get user media with Android-specific constraints
+                    navigator.mediaDevices.getUserMedia(constraints)
+                        .then(stream => {
+                            video.srcObject = stream;
+                            video.play();
+                        })
+                        .catch(err => console.error('Error accessing camera:', err));
                 }
             });
         }
