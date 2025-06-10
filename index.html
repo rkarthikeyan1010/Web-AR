@@ -107,34 +107,52 @@
         let markerLostCount = 0;
         const MAX_MARKER_LOST_COUNT = 10; // Number of frames to wait before hiding
 
+        // Wait for the model to load
+        butterfly.addEventListener('model-loaded', () => {
+            console.log('Model loaded, checking animation data...');
+            const model = butterfly.getObject3D('mesh');
+            if (model) {
+                console.log('Model loaded successfully');
+                // Check for animations
+                if (model.animations && model.animations.length > 0) {
+                    console.log('Animations found:', model.animations.length);
+                    model.animations.forEach((anim, index) => {
+                        console.log(`Animation ${index}:`, {
+                            name: anim.name,
+                            duration: anim.duration,
+                            tracks: anim.tracks.length
+                        });
+                    });
+                    // Start animation immediately
+                    startAnimation();
+                } else {
+                    console.log('No animations found in the model');
+                }
+            } else {
+                console.log('Model not loaded properly');
+            }
+        });
+
         // Function to start animation
         function startAnimation() {
             if (butterfly.components['animation-mixer']) {
                 const mixer = butterfly.components['animation-mixer'].mixer;
                 if (mixer) {
-                    mixer.timeScale = 1;
-                    mixer.clipAction('*').play();
-                    console.log('Animation started');
+                    console.log('Animation mixer found, starting continuous animation...');
+                    const model = butterfly.getObject3D('mesh');
+                    if (model && model.animations && model.animations.length > 0) {
+                        mixer.timeScale = 1;
+                        const action = mixer.clipAction(model.animations[0]);
+                        action.setLoop(THREE.LoopRepeat);
+                        action.clampWhenFinished = false;
+                        action.play();
+                        console.log('Animation started in continuous loop');
+                    } else {
+                        console.log('No animations available to play');
+                    }
                 }
             }
         }
-
-        // Function to stop animation
-        function stopAnimation() {
-            if (butterfly.components['animation-mixer']) {
-                const mixer = butterfly.components['animation-mixer'].mixer;
-                if (mixer) {
-                    mixer.stopAllAction();
-                    console.log('Animation stopped');
-                }
-            }
-        }
-
-        // Wait for the model to load
-        butterfly.addEventListener('model-loaded', () => {
-            console.log('Model loaded, starting animation');
-            startAnimation();
-        });
 
         marker.addEventListener('markerFound', () => {
             console.log('Hiro marker found!');
@@ -143,8 +161,6 @@
             markerLostCount = 0;
             // Ensure the butterfly is visible when marker is found
             butterfly.setAttribute('visible', true);
-            // Start animation
-            startAnimation();
         });
 
         marker.addEventListener('markerLost', () => {
@@ -168,7 +184,6 @@
                     // Only hide if we've lost the marker for multiple frames and exceeded timeout
                     if (markerLostCount > MAX_MARKER_LOST_COUNT && currentTime - lastMarkerTime > MARKER_TIMEOUT) {
                         butterfly.setAttribute('visible', false);
-                        stopAnimation();
                     }
                 }
             }
