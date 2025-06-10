@@ -32,10 +32,10 @@
                            matrixCodeType: 3x3;
                            maxDetectionRate: 60;
                            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
-                           minConfidence: 0.3;
-                           smoothCount: 15;
-                           smoothTolerance: 0.1;
-                           smoothThreshold: 8;
+                           minConfidence: 0.5;
+                           smoothCount: 20;
+                           smoothTolerance: 0.05;
+                           smoothThreshold: 5;
                            sourceWidth: 1280;
                            sourceHeight: 720;
                            displayWidth: 1280;
@@ -43,9 +43,9 @@
         <!-- Define the Hiro marker -->
         <a-marker preset="hiro"
                   smooth="true" 
-                  smoothCount="15" 
-                  smoothTolerance="0.1" 
-                  smoothThreshold="8"
+                  smoothCount="20" 
+                  smoothTolerance="0.05" 
+                  smoothThreshold="5"
                   raycaster="objects: .clickable"
                   emitevents="true"
                   id="marker">
@@ -54,7 +54,8 @@
                       scale="1 1 1"
                       rotation="0 0 0"
                       gltf-model="assets/models/Butterfly_Blender.glb"
-                      animation-mixer="clip: *; loop: repeat; timeScale: 1"
+                      animation-mixer="clip: *; loop: repeat; timeScale: 1; crossFadeDuration: 0.4"
+                      material="shader: standard; metalness: 0.5; roughness: 0.5"
                       id="butterfly">
             </a-entity>
         </a-marker>
@@ -105,12 +106,16 @@
             console.log('Hiro marker found!');
             // Ensure the butterfly is visible when marker is found
             butterfly.setAttribute('visible', true);
+            // Start animation
+            butterfly.components['animation-mixer'].play();
         });
 
         marker.addEventListener('markerLost', () => {
             console.log('Hiro marker lost!');
             // Hide the butterfly when marker is lost
             butterfly.setAttribute('visible', false);
+            // Stop animation
+            butterfly.components['animation-mixer'].stop();
         });
 
         // Add a component to handle marker movement
