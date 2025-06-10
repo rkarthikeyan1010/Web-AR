@@ -107,12 +107,33 @@
         let markerLostCount = 0;
         const MAX_MARKER_LOST_COUNT = 10; // Number of frames to wait before hiding
 
+        // Function to start animation
+        function startAnimation() {
+            if (butterfly.components['animation-mixer']) {
+                const mixer = butterfly.components['animation-mixer'].mixer;
+                if (mixer) {
+                    mixer.timeScale = 1;
+                    mixer.clipAction('*').play();
+                    console.log('Animation started');
+                }
+            }
+        }
+
+        // Function to stop animation
+        function stopAnimation() {
+            if (butterfly.components['animation-mixer']) {
+                const mixer = butterfly.components['animation-mixer'].mixer;
+                if (mixer) {
+                    mixer.stopAllAction();
+                    console.log('Animation stopped');
+                }
+            }
+        }
+
         // Wait for the model to load
         butterfly.addEventListener('model-loaded', () => {
             console.log('Model loaded, starting animation');
-            if (butterfly.components['animation-mixer']) {
-                butterfly.components['animation-mixer'].play();
-            }
+            startAnimation();
         });
 
         marker.addEventListener('markerFound', () => {
@@ -123,9 +144,7 @@
             // Ensure the butterfly is visible when marker is found
             butterfly.setAttribute('visible', true);
             // Start animation
-            if (butterfly.components['animation-mixer']) {
-                butterfly.components['animation-mixer'].play();
-            }
+            startAnimation();
         });
 
         marker.addEventListener('markerLost', () => {
@@ -149,9 +168,7 @@
                     // Only hide if we've lost the marker for multiple frames and exceeded timeout
                     if (markerLostCount > MAX_MARKER_LOST_COUNT && currentTime - lastMarkerTime > MARKER_TIMEOUT) {
                         butterfly.setAttribute('visible', false);
-                        if (butterfly.components['animation-mixer']) {
-                            butterfly.components['animation-mixer'].stop();
-                        }
+                        stopAnimation();
                     }
                 }
             }
