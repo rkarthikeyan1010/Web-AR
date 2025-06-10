@@ -54,7 +54,7 @@
                       scale="1 1 1"
                       rotation="0 0 0"
                       gltf-model="assets/models/Butterfly_Blender.glb"
-                      animation-mixer="clip: *; loop: repeat; timeScale: 1; crossFadeDuration: 0.4"
+                      animation-mixer="clip: *; loop: repeat; timeScale: 1; crossFadeDuration: 0.4; clampWhenFinished: false"
                       material="shader: standard; metalness: 0.5; roughness: 0.5"
                       id="butterfly">
             </a-entity>
@@ -107,6 +107,14 @@
         let markerLostCount = 0;
         const MAX_MARKER_LOST_COUNT = 10; // Number of frames to wait before hiding
 
+        // Wait for the model to load
+        butterfly.addEventListener('model-loaded', () => {
+            console.log('Model loaded, starting animation');
+            if (butterfly.components['animation-mixer']) {
+                butterfly.components['animation-mixer'].play();
+            }
+        });
+
         marker.addEventListener('markerFound', () => {
             console.log('Hiro marker found!');
             isMarkerVisible = true;
@@ -115,7 +123,9 @@
             // Ensure the butterfly is visible when marker is found
             butterfly.setAttribute('visible', true);
             // Start animation
-            butterfly.components['animation-mixer'].play();
+            if (butterfly.components['animation-mixer']) {
+                butterfly.components['animation-mixer'].play();
+            }
         });
 
         marker.addEventListener('markerLost', () => {
@@ -139,7 +149,9 @@
                     // Only hide if we've lost the marker for multiple frames and exceeded timeout
                     if (markerLostCount > MAX_MARKER_LOST_COUNT && currentTime - lastMarkerTime > MARKER_TIMEOUT) {
                         butterfly.setAttribute('visible', false);
-                        butterfly.components['animation-mixer'].stop();
+                        if (butterfly.components['animation-mixer']) {
+                            butterfly.components['animation-mixer'].stop();
+                        }
                     }
                 }
             }
