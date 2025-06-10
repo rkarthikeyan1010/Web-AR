@@ -32,10 +32,10 @@
                            matrixCodeType: 3x3;
                            maxDetectionRate: 60;
                            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
-                           minConfidence: 0.5;
-                           smoothCount: 20;
-                           smoothTolerance: 0.05;
-                           smoothThreshold: 5;
+                           minConfidence: 0.4;
+                           smoothCount: 25;
+                           smoothTolerance: 0.03;
+                           smoothThreshold: 3;
                            sourceWidth: 1280;
                            sourceHeight: 720;
                            displayWidth: 1280;
@@ -43,9 +43,9 @@
         <!-- Define the Hiro marker -->
         <a-marker preset="hiro"
                   smooth="true" 
-                  smoothCount="20" 
-                  smoothTolerance="0.05" 
-                  smoothThreshold="5"
+                  smoothCount="25" 
+                  smoothTolerance="0.03" 
+                  smoothThreshold="3"
                   raycaster="objects: .clickable"
                   emitevents="true"
                   id="marker">
@@ -101,9 +101,14 @@
         // Add marker found/lost events and handle marker movement
         const marker = document.querySelector('#marker');
         const butterfly = document.querySelector('#butterfly');
+        let isMarkerVisible = false;
+        let lastMarkerTime = 0;
+        const MARKER_TIMEOUT = 1000; // 1 second timeout
 
         marker.addEventListener('markerFound', () => {
             console.log('Hiro marker found!');
+            isMarkerVisible = true;
+            lastMarkerTime = Date.now();
             // Ensure the butterfly is visible when marker is found
             butterfly.setAttribute('visible', true);
             // Start animation
@@ -112,13 +117,12 @@
 
         marker.addEventListener('markerLost', () => {
             console.log('Hiro marker lost!');
-            // Hide the butterfly when marker is lost
-            butterfly.setAttribute('visible', false);
-            // Stop animation
-            butterfly.components['animation-mixer'].stop();
+            isMarkerVisible = false;
+            // Don't immediately hide the butterfly
+            // Let the timeout handle it
         });
 
-        // Add a component to handle marker movement
+        // Add a component to handle marker movement and animation
         AFRAME.registerComponent('marker-handler', {
             init: function() {
                 this.el.addEventListener('markerFound', () => {
@@ -126,6 +130,15 @@
                     this.el.object3D.rotation.set(0, 0, 0);
                     this.el.object3D.position.set(0, 0, 0);
                 });
+            },
+            tick: function() {
+                if (!isMarkerVisible && butterfly.getAttribute('visible')) {
+                    const currentTime = Date.now();
+                    if (currentTime - lastMarkerTime > MARKER_TIMEOUT) {
+                        butterfly.setAttribute('visible', false);
+                        butterfly.components['animation-mixer'].stop();
+                    }
+                }
             }
         });
 
